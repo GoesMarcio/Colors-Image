@@ -132,7 +132,26 @@ class ColorsImage{
     }
 
     public function get_thumbnail($width, $height){
-        //TODO
+        // Load
+        $thumb = imagecreatetruecolor($width, $height);
+
+        if($this->width > $this->height){
+            $_width = $this->height;
+            $_height = $this->height;
+            $_x = intval(($this->width - $this->height)/2);
+            $_y = 0;
+        }else{
+            $_width = $this->height;
+            $_height = $this->height;
+            $_x = 0;
+            $_y = intval(($this->height - $this->width)/2);
+        }
+
+        
+        // Resize
+        imagecopyresized($thumb, $this->image_resource, 0, 0, $_x, $_y, $width, $height, $_width, $_height);
+
+        return imagejpeg($thumb);
     }
 
     public function get_width(){
