@@ -235,4 +235,34 @@ class ColorsImage{
 
         return $data;
     }
+
+    public static function get_brightness($color){
+        // check is rga
+        if(is_array($color)){
+            $c_r = $color['r'];
+            $c_g = $color['g'];
+            $c_b = $color['b'];
+            
+            return (($c_r * 299) + ($c_g * 587) + ($c_b * 114)) / 1000;
+
+        }else{
+            // is #hex
+            $hex = str_replace('#', '', $color);
+            $c_r = hexdec(substr($hex, 0, 2));
+            $c_g = hexdec(substr($hex, 2, 2));
+            $c_b = hexdec(substr($hex, 4, 2));
+            
+            return (($c_r * 299) + ($c_g * 587) + ($c_b * 114)) / 1000;
+        }
+    }
+
+    public static function get_color_type($color, $coefficient = 130){
+        $brightness = self::get_brightness($color);
+
+        if($brightness > $coefficient){
+            return "light";
+        }else{
+            return "black";
+        }
+    }
 }
