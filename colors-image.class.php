@@ -8,10 +8,12 @@ class ColorsImage{
     private $image_resource;
     private $image_array = array();
     private $pallete = array();
+    private $pallete_similarity = array();
 
-    public function __construct(string $image){
+    public function __construct(string $image, int $factor_jump = 1){
         try{
             $this->image = $image;
+            $this->factor_jump = $factor_jump;
             $this->image_details();
             $this->read_image();
             
@@ -73,17 +75,21 @@ class ColorsImage{
 
         $this->image_resource = $function_img($this->image);
 
-        for($i = 0; $i < $this->width; $i++){
-            for($j = 0; $j < $this->height; $j++){
+        for($i = 0; $i < $this->width; $i += $this->factor_jump){
+            for($j = 0; $j < $this->height; $j += $this->factor_jump){
                 $index = imagecolorat($this->image_resource, $i, $j);
                 $rgb = imagecolorsforindex($this->image_resource, $index);
-                $hex = self::RGBToHex($rgb["red"], $rgb["green"], $rgb["blue"]);
-                
-                $this->image_array[$j][$i] = array(
-                    "r" => $rgb["red"],
-                    "g" => $rgb["green"],
-                    "b" => $rgb["blue"],
-                );
+
+                if($rgb['alpha'] == 127){
+                    $hex = "transparent";
+                }else{
+                    $hex = self::RGBToHex($rgb["red"], $rgb["green"], $rgb["blue"]);
+                    $this->image_array[$j][$i] = array(
+                        "r" => $rgb["red"],
+                        "g" => $rgb["green"],
+                        "b" => $rgb["blue"],
+                    );
+                }
                 
                 if(isset($this->pallete[$hex])){
                     $this->pallete[$hex] += 1;
@@ -170,19 +176,33 @@ class ColorsImage{
         return count($this->pallete);
     }
     
-    public function get_pallete(int $limit = null){
+    public function get_pallete(int $limit = null, $transparent = true){
         $data = array();
         foreach($this->pallete as $key => $value){
-            $rgb = self::HexToRGB($key);
-            array_push($data, array(
-                "hex" => $key,
-                "rgb" => array(
-                    "r" => $rgb["r"], 
-                    "g" => $rgb["g"],
-                    "b" => $rgb["b"]
-                ),
-                "count" => $value
-            ));
+            if($key == "transparent"){
+                if(!$transparent) continue;
+
+                array_push($data, array(
+                    "hex" => $key,
+                    "rgb" => array(
+                        "r" => 0, 
+                        "g" => 0,
+                        "b" => 0
+                    ),
+                    "count" => $value
+                ));
+            }else{
+                $rgb = self::HexToRGB($key);
+                array_push($data, array(
+                    "hex" => $key,
+                    "rgb" => array(
+                        "r" => $rgb["r"], 
+                        "g" => $rgb["g"],
+                        "b" => $rgb["b"]
+                    ),
+                    "count" => $value
+                ));
+            }
         }
 
         if($limit){
@@ -192,7 +212,7 @@ class ColorsImage{
         return $data;
     }
 
-    public function get_pallete_percentage(float $limit = null){
+    public function get_pallete_percentage(float $limit = null, $transparent = true){
         $total_colors = (float) $this->width * $this->height;
         $hundred = (float) 100;
         $data = array();
@@ -202,15 +222,30 @@ class ColorsImage{
             $percentage = (float) ($value * 100) / $total_colors;
             $percentage = round($percentage, 2);
             $hundred -= $percentage;
-            array_push($data, array(
-                "hex" => $key,
-                "rgb" => array(
-                    "r" => $rgb["r"], 
-                    "g" => $rgb["g"],
-                    "b" => $rgb["b"]
-                ),
-                "percentage" => $percentage
-            ));
+
+            if($key == "transparent"){
+                if(!$transparent) continue;
+
+                array_push($data, array(
+                    "hex" => $key,
+                    "rgb" => array(
+                        "r" => 0, 
+                        "g" => 0,
+                        "b" => 0
+                    ),
+                    "percentage" => $percentage
+                ));
+            }else{
+                array_push($data, array(
+                    "hex" => $key,
+                    "rgb" => array(
+                        "r" => $rgb["r"], 
+                        "g" => $rgb["g"],
+                        "b" => $rgb["b"]
+                    ),
+                    "percentage" => $percentage
+                ));
+            }
         }
 
         $data[0]["percentage"] += round($hundred, 2);
@@ -262,7 +297,79 @@ class ColorsImage{
         if($brightness > $coefficient){
             return "light";
         }else{
-            return "black";
+            return "dark";
         }
+    }
+
+    public function array_sort($array, $on, $order=SORT_ASC){
+        $new_array = array();
+        $sortable_array = array();
+
+        if (count($array) > 0) {
+            foreach ($array as $k => $v) {
+                if (is_array($v)) {
+                    foreach ($v as $k2 => $v2) {
+                        if ($k2 == $on) {
+                            $sortable_array[$k] = $v2;
+                        }
+                    }
+                } else {
+                    $sortable_array[$k] = $v;
+                }
+            }
+
+            switch ($order) {
+                case SORT_ASC:
+                    asort($sortable_array);
+                break;
+                case SORT_DESC:
+                    arsort($sortable_array);
+                break;
+            }
+
+            foreach ($sortable_array as $k => $v) {
+                $new_array[$k] = $array[$k];
+            }
+        }
+
+        return $new_array;
+    }
+
+    public function get_pallete_by_similarity(int $limit = null){
+        if(sizeof($this->pallete_similarity) > 0){
+            if($limit)
+                return array_slice($this->pallete_similarity, 0, $limit);
+            return $this->pallete_similarity;
+        }
+
+        $pallete = $this->get_pallete(null, false);
+
+        foreach($pallete as $value){
+            if($value['hex'] == "transparent"){
+                continue;
+            }else{
+                $flag_add = false;
+                for($i = 0; $i < sizeof($this->pallete_similarity); $i++){
+
+                    $d = sqrt(($this->pallete_similarity[$i]['rgb']['r']-$value['rgb']['r'])**2+($this->pallete_similarity[$i]['rgb']['g']-$value['rgb']['g'])**2+($this->pallete_similarity[$i]['rgb']['b']-$value['rgb']['b'])**2);
+                    // echo "Comparando ".$value['hex']." com ".$color['hex'].": distancia: ".$d."<br>";
+                    if($d < 10){
+                        $flag_add = true;
+                        $this->pallete_similarity[$i]['count'] = $this->pallete_similarity[$i]['count'] + $value['count'];
+                        break;
+                    }
+                }
+
+                if(!$flag_add){
+                    array_push($this->pallete_similarity, $value);
+                }
+            }
+        }
+
+        $this->pallete_similarity = $this->array_sort($this->pallete_similarity, 'count', SORT_DESC);
+
+        if($limit)
+            return array_slice($this->pallete_similarity, 0, $limit);
+        return $this->pallete_similarity;
     }
 }

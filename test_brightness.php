@@ -1,7 +1,6 @@
 <?php
 require_once("colors-image.class.php");
 
-
 $dark_color_hex = "#272822";
 $dark_color_rgb = array(
     "r" => "39",
@@ -14,6 +13,10 @@ echo ColorsImage::get_brightness($dark_color_hex);
 echo "<br>";
 
 echo ColorsImage::get_brightness($dark_color_rgb);
+
+echo "<br>";
+
+echo ColorsImage::get_color_type($dark_color_rgb);
 
 
 echo "<br>";
@@ -31,6 +34,9 @@ echo "<br>";
 
 echo ColorsImage::get_brightness($super_dark_color_rgb);
 
+echo "<br>";
+
+echo ColorsImage::get_color_type($super_dark_color_rgb);
 
 echo "<br>";
 
@@ -47,6 +53,10 @@ echo "<br>";
 
 echo ColorsImage::get_brightness($light_color_rgb);
 
+echo "<br>";
+
+echo ColorsImage::get_color_type($light_color_rgb);
+
 
 echo "<br>";
 
@@ -62,3 +72,7 @@ echo ColorsImage::get_brightness($super_light_color_hex);
 echo "<br>";
 
 echo ColorsImage::get_brightness($super_light_color_rgb);
+
+echo "<br>";
+
+echo ColorsImage::get_color_type($super_light_color_rgb);
